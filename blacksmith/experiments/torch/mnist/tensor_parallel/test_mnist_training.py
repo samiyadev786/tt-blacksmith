@@ -110,6 +110,8 @@ def train(
 
                 # Compute loss
                 loss = cross_entropy_loss(outputs, batch["targets"])
+
+                # Backward pass
                 loss.backward()
                 running_loss += loss.item()
 
