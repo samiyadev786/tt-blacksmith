@@ -13,12 +13,12 @@ Usage:
         --tt-metrics results/metrics_history_tt.json \
         --output-dir results/comparison
 """
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 # Add parent directory to path for imports (handles hyphenated directory name)
 _current_dir = Path(__file__).parent
@@ -26,15 +26,16 @@ if str(_current_dir) not in sys.path:
     sys.path.insert(0, str(_current_dir))
 
 from utils import (
+    MATPLOTLIB_AVAILABLE,
     compare_metrics,
     compute_metric_parity,
     print_parity_report,
-    MATPLOTLIB_AVAILABLE,
 )
 
 try:
     import matplotlib
-    matplotlib.use('Agg')
+
+    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 except ImportError:
     pass
@@ -42,7 +43,7 @@ except ImportError:
 
 def load_metrics(metrics_path: str) -> Dict[str, List[float]]:
     """Load metrics from JSON file."""
-    with open(metrics_path, 'r') as f:
+    with open(metrics_path, "r") as f:
         return json.load(f)
 
 
@@ -58,7 +59,9 @@ def generate_summary_report(
     report.append("")
     report.append("## Summary")
     report.append("")
-    report.append("This report compares the training results between CPU baseline and TT-N150 hardware.")
+    report.append(
+        "This report compares the training results between CPU baseline and TT-N150 hardware."
+    )
     report.append("")
 
     # Training summary
@@ -76,15 +79,23 @@ def generate_summary_report(
     # Metric parity
     report.append("## Metric Parity")
     report.append("")
-    report.append("| Metric | Final CPU | Final TT-N150 | Mean Abs Diff | Mean Rel Diff |")
-    report.append("|--------|-----------|---------------|---------------|---------------|")
+    report.append(
+        "| Metric | Final CPU | Final TT-N150 | Mean Abs Diff | Mean Rel Diff |"
+    )
+    report.append(
+        "|--------|-----------|---------------|---------------|---------------|"
+    )
 
     for metric_name, stats in parity.items():
-        cpu_val = f"{stats['final_cpu']:.4f}" if stats['final_cpu'] is not None else "N/A"
-        tt_val = f"{stats['final_tt']:.4f}" if stats['final_tt'] is not None else "N/A"
+        cpu_val = (
+            f"{stats['final_cpu']:.4f}" if stats["final_cpu"] is not None else "N/A"
+        )
+        tt_val = f"{stats['final_tt']:.4f}" if stats["final_tt"] is not None else "N/A"
         mean_abs = f"{stats['mean_abs_diff']:.6f}"
         mean_rel = f"{stats['mean_rel_diff']:.2%}"
-        report.append(f"| {metric_name} | {cpu_val} | {tt_val} | {mean_abs} | {mean_rel} |")
+        report.append(
+            f"| {metric_name} | {cpu_val} | {tt_val} | {mean_abs} | {mean_rel} |"
+        )
 
     report.append("")
 
@@ -93,14 +104,20 @@ def generate_summary_report(
     report.append("")
 
     if "train_loss" in cpu_metrics and "train_loss" in tt_metrics:
-        cpu_final_loss = cpu_metrics["train_loss"][-1] if cpu_metrics["train_loss"] else None
-        tt_final_loss = tt_metrics["train_loss"][-1] if tt_metrics["train_loss"] else None
+        cpu_final_loss = (
+            cpu_metrics["train_loss"][-1] if cpu_metrics["train_loss"] else None
+        )
+        tt_final_loss = (
+            tt_metrics["train_loss"][-1] if tt_metrics["train_loss"] else None
+        )
 
         if cpu_final_loss and tt_final_loss:
             loss_diff = abs(cpu_final_loss - tt_final_loss)
             loss_diff_pct = loss_diff / cpu_final_loss * 100
 
-            report.append(f"- **Final Training Loss Difference**: {loss_diff:.6f} ({loss_diff_pct:.2f}%)")
+            report.append(
+                f"- **Final Training Loss Difference**: {loss_diff:.6f} ({loss_diff_pct:.2f}%)"
+            )
 
     if "val_loss" in cpu_metrics and "val_loss" in tt_metrics:
         cpu_final_val = cpu_metrics["val_loss"][-1] if cpu_metrics["val_loss"] else None
@@ -110,7 +127,9 @@ def generate_summary_report(
             val_diff = abs(cpu_final_val - tt_final_val)
             val_diff_pct = val_diff / cpu_final_val * 100
 
-            report.append(f"- **Final Validation Loss Difference**: {val_diff:.6f} ({val_diff_pct:.2f}%)")
+            report.append(
+                f"- **Final Validation Loss Difference**: {val_diff:.6f} ({val_diff_pct:.2f}%)"
+            )
 
     if "val_ppl" in cpu_metrics and "val_ppl" in tt_metrics:
         cpu_final_ppl = cpu_metrics["val_ppl"][-1] if cpu_metrics["val_ppl"] else None
@@ -120,7 +139,9 @@ def generate_summary_report(
             ppl_diff = abs(cpu_final_ppl - tt_final_ppl)
             ppl_diff_pct = ppl_diff / cpu_final_ppl * 100
 
-            report.append(f"- **Final Perplexity Difference**: {ppl_diff:.4f} ({ppl_diff_pct:.2f}%)")
+            report.append(
+                f"- **Final Perplexity Difference**: {ppl_diff:.4f} ({ppl_diff_pct:.2f}%)"
+            )
 
     report.append("")
     report.append("## Conclusion")
@@ -129,19 +150,27 @@ def generate_summary_report(
     # Determine if parity is acceptable
     acceptable = True
     for metric_name, stats in parity.items():
-        if "loss" in metric_name.lower() and stats['mean_rel_diff'] > 0.05:  # 5% threshold
+        if (
+            "loss" in metric_name.lower() and stats["mean_rel_diff"] > 0.05
+        ):  # 5% threshold
             acceptable = False
             break
 
     if acceptable:
-        report.append("✅ **Training results show acceptable parity between CPU and TT-N150.**")
+        report.append(
+            "✅ **Training results show acceptable parity between CPU and TT-N150.**"
+        )
         report.append("")
-        report.append("The loss curves and perplexity metrics converge similarly on both platforms,")
+        report.append(
+            "The loss curves and perplexity metrics converge similarly on both platforms,"
+        )
         report.append("indicating successful LoRA fine-tuning on TT hardware.")
     else:
         report.append("⚠️ **Some metrics show divergence between CPU and TT-N150.**")
         report.append("")
-        report.append("Please review the comparison plots and investigate any fallback operations")
+        report.append(
+            "Please review the comparison plots and investigate any fallback operations"
+        )
         report.append("that may have affected training.")
 
     report.append("")
@@ -153,8 +182,8 @@ def generate_summary_report(
 
     # Write report
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(report))
+    with open(output_path, "w") as f:
+        f.write("\n".join(report))
 
     print(f"Generated comparison report: {output_path}")
 
@@ -164,22 +193,19 @@ def main():
         description="Compare CPU and TT-N150 training results"
     )
     parser.add_argument(
-        "--cpu-metrics",
-        type=str,
-        required=True,
-        help="Path to CPU metrics JSON file"
+        "--cpu-metrics", type=str, required=True, help="Path to CPU metrics JSON file"
     )
     parser.add_argument(
         "--tt-metrics",
         type=str,
         required=True,
-        help="Path to TT-N150 metrics JSON file"
+        help="Path to TT-N150 metrics JSON file",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
         default="results/comparison",
-        help="Directory to save comparison outputs"
+        help="Directory to save comparison outputs",
     )
 
     args = parser.parse_args()
@@ -217,7 +243,7 @@ def main():
 
     # Save parity data
     parity_path = os.path.join(args.output_dir, "parity_statistics.json")
-    with open(parity_path, 'w') as f:
+    with open(parity_path, "w") as f:
         json.dump(parity, f, indent=2)
     print(f"Saved parity statistics to: {parity_path}")
 
@@ -227,4 +253,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

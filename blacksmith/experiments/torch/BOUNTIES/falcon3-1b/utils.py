@@ -10,21 +10,23 @@ This module provides helper functions including:
 - Metrics computation (perplexity, accuracy)
 - Plotting utilities for loss curves comparison
 """
-import os
-import math
 import logging
-from typing import Dict, List, Optional, Tuple, Any, Callable
+import math
+import os
 from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
 try:
     import matplotlib
-    matplotlib.use('Agg')  # Non-interactive backend for server environments
+
+    matplotlib.use("Agg")  # Non-interactive backend for server environments
     import matplotlib.pyplot as plt
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
@@ -37,10 +39,11 @@ logger = logging.getLogger(__name__)
 # CPU Fallback Mechanism
 # ============================================================================
 
+
 class FallbackRegistry:
     """
     Registry for tracking CPU fallback operations.
-    
+
     This class maintains a record of operations that have been
     redirected to CPU due to TT-N150 compilation or runtime issues.
     """
@@ -56,11 +59,13 @@ class FallbackRegistry:
         issue_url: Optional[str] = None,
     ):
         """Register a fallback operation."""
-        self._fallback_ops.append({
-            "operation": operation_name,
-            "reason": reason,
-            "issue_url": issue_url,
-        })
+        self._fallback_ops.append(
+            {
+                "operation": operation_name,
+                "reason": reason,
+                "issue_url": issue_url,
+            }
+        )
         logger.warning(
             f"CPU Fallback: {operation_name} - {reason}"
             + (f" (Issue: {issue_url})" if issue_url else "")
@@ -82,7 +87,7 @@ class FallbackRegistry:
         for i, op in enumerate(self._fallback_ops, 1):
             logger.info(f"{i}. {op['operation']}")
             logger.info(f"   Reason: {op['reason']}")
-            if op.get('issue_url'):
+            if op.get("issue_url"):
                 logger.info(f"   Issue: {op['issue_url']}")
         logger.info("=" * 60)
 
@@ -98,7 +103,7 @@ def cpu_fallback(
 ):
     """
     Decorator for CPU fallback on specific operations.
-    
+
     Use this decorator to wrap functions that may fail on TT hardware.
     When the decorated function fails, it will automatically retry
     on CPU with the same inputs.
@@ -113,6 +118,7 @@ def cpu_fallback(
         def custom_attention(q, k, v):
             return torch.nn.functional.scaled_dot_product_attention(q, k, v)
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -128,8 +134,7 @@ def cpu_fallback(
 
                 # Move tensors to CPU and retry
                 cpu_args = tuple(
-                    arg.cpu() if isinstance(arg, torch.Tensor) else arg
-                    for arg in args
+                    arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args
                 )
                 cpu_kwargs = {
                     k: v.cpu() if isinstance(v, torch.Tensor) else v
@@ -152,13 +157,14 @@ def cpu_fallback(
                 return result
 
         return wrapper
+
     return decorator
 
 
 class CPUFallbackModule(nn.Module):
     """
     Wrapper module that executes operations on CPU when TT execution fails.
-    
+
     Use this to wrap specific layers or operations that need fallback support.
     """
 
@@ -201,12 +207,10 @@ class CPUFallbackModule(nn.Module):
 
         # Move inputs to CPU
         cpu_args = tuple(
-            arg.cpu() if isinstance(arg, torch.Tensor) else arg
-            for arg in args
+            arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args
         )
         cpu_kwargs = {
-            k: v.cpu() if isinstance(v, torch.Tensor) else v
-            for k, v in kwargs.items()
+            k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in kwargs.items()
         }
 
         # Move module to CPU temporarily
@@ -235,6 +239,7 @@ class CPUFallbackModule(nn.Module):
 # ============================================================================
 # Loss Functions
 # ============================================================================
+
 
 def cross_entropy_loss_with_mask(
     logits: torch.Tensor,
@@ -278,7 +283,7 @@ def custom_cross_entropy_loss(
 ) -> torch.Tensor:
     """
     Custom cross-entropy loss implementation.
-    
+
     This version uses log_softmax and manual reduction for better
     compatibility with TT hardware.
 
@@ -332,6 +337,7 @@ def transform_labels_for_custom_loss(
 # Metrics Computation
 # ============================================================================
 
+
 def compute_perplexity(loss: float) -> float:
     """
     Compute perplexity from cross-entropy loss.
@@ -342,7 +348,7 @@ def compute_perplexity(loss: float) -> float:
     Returns:
         Perplexity value
     """
-    return math.exp(loss) if loss < 100 else float('inf')
+    return math.exp(loss) if loss < 100 else float("inf")
 
 
 def compute_accuracy(
@@ -374,6 +380,7 @@ def compute_accuracy(
 # ============================================================================
 # Plotting Utilities
 # ============================================================================
+
 
 def save_loss_curves(
     train_losses: List[float],
@@ -407,7 +414,7 @@ def save_loss_curves(
     plt.tight_layout()
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     logger.info(f"Saved loss curves to {output_path}")
 
@@ -444,7 +451,7 @@ def save_perplexity_curves(
     plt.tight_layout()
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     logger.info(f"Saved perplexity curves to {output_path}")
 
@@ -477,8 +484,17 @@ def compare_metrics(
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
-        plt.plot(steps, cpu_metrics["train_loss"], label="CPU", color="blue", linewidth=2)
-        plt.plot(steps, tt_metrics["train_loss"], label="TT-N150", color="green", linewidth=2, linestyle="--")
+        plt.plot(
+            steps, cpu_metrics["train_loss"], label="CPU", color="blue", linewidth=2
+        )
+        plt.plot(
+            steps,
+            tt_metrics["train_loss"],
+            label="TT-N150",
+            color="green",
+            linewidth=2,
+            linestyle="--",
+        )
         plt.xlabel("Steps")
         plt.ylabel("Training Loss")
         plt.title("Training Loss: CPU vs TT-N150")
@@ -487,8 +503,17 @@ def compare_metrics(
 
         plt.subplot(1, 2, 2)
         if "val_loss" in cpu_metrics and "val_loss" in tt_metrics:
-            plt.plot(steps, cpu_metrics["val_loss"], label="CPU", color="blue", linewidth=2)
-            plt.plot(steps, tt_metrics["val_loss"], label="TT-N150", color="green", linewidth=2, linestyle="--")
+            plt.plot(
+                steps, cpu_metrics["val_loss"], label="CPU", color="blue", linewidth=2
+            )
+            plt.plot(
+                steps,
+                tt_metrics["val_loss"],
+                label="TT-N150",
+                color="green",
+                linewidth=2,
+                linestyle="--",
+            )
             plt.xlabel("Steps")
             plt.ylabel("Validation Loss")
             plt.title("Validation Loss: CPU vs TT-N150")
@@ -504,8 +529,17 @@ def compare_metrics(
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
-        plt.plot(steps, cpu_metrics["train_ppl"], label="CPU", color="blue", linewidth=2)
-        plt.plot(steps, tt_metrics["train_ppl"], label="TT-N150", color="green", linewidth=2, linestyle="--")
+        plt.plot(
+            steps, cpu_metrics["train_ppl"], label="CPU", color="blue", linewidth=2
+        )
+        plt.plot(
+            steps,
+            tt_metrics["train_ppl"],
+            label="TT-N150",
+            color="green",
+            linewidth=2,
+            linestyle="--",
+        )
         plt.xlabel("Steps")
         plt.ylabel("Training Perplexity")
         plt.title("Training Perplexity: CPU vs TT-N150")
@@ -514,8 +548,17 @@ def compare_metrics(
 
         plt.subplot(1, 2, 2)
         if "val_ppl" in cpu_metrics and "val_ppl" in tt_metrics:
-            plt.plot(steps, cpu_metrics["val_ppl"], label="CPU", color="blue", linewidth=2)
-            plt.plot(steps, tt_metrics["val_ppl"], label="TT-N150", color="green", linewidth=2, linestyle="--")
+            plt.plot(
+                steps, cpu_metrics["val_ppl"], label="CPU", color="blue", linewidth=2
+            )
+            plt.plot(
+                steps,
+                tt_metrics["val_ppl"],
+                label="TT-N150",
+                color="green",
+                linewidth=2,
+                linestyle="--",
+            )
             plt.xlabel("Steps")
             plt.ylabel("Validation Perplexity")
             plt.title("Validation Perplexity: CPU vs TT-N150")
@@ -523,7 +566,9 @@ def compare_metrics(
             plt.grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"{prefix}perplexity_comparison.png"), dpi=150)
+        plt.savefig(
+            os.path.join(output_dir, f"{prefix}perplexity_comparison.png"), dpi=150
+        )
         plt.close()
 
     logger.info(f"Saved comparison plots to {output_dir}")
@@ -581,8 +626,16 @@ def print_parity_report(parity: Dict[str, Dict[str, float]]):
 
     for metric_name, stats in parity.items():
         logger.info(f"\n{metric_name}:")
-        logger.info(f"  Final CPU:         {stats['final_cpu']:.6f}" if stats['final_cpu'] else "  Final CPU:         N/A")
-        logger.info(f"  Final TT-N150:     {stats['final_tt']:.6f}" if stats['final_tt'] else "  Final TT-N150:     N/A")
+        logger.info(
+            f"  Final CPU:         {stats['final_cpu']:.6f}"
+            if stats["final_cpu"]
+            else "  Final CPU:         N/A"
+        )
+        logger.info(
+            f"  Final TT-N150:     {stats['final_tt']:.6f}"
+            if stats["final_tt"]
+            else "  Final TT-N150:     N/A"
+        )
         logger.info(f"  Mean Abs Diff:     {stats['mean_abs_diff']:.6f}")
         logger.info(f"  Max Abs Diff:      {stats['max_abs_diff']:.6f}")
         logger.info(f"  Mean Rel Diff:     {stats['mean_rel_diff']:.2%}")
@@ -594,6 +647,7 @@ def print_parity_report(parity: Dict[str, Dict[str, float]]):
 # ============================================================================
 # Model Utilities
 # ============================================================================
+
 
 def get_trainable_params(model: nn.Module) -> Tuple[int, int, float]:
     """
@@ -612,7 +666,9 @@ def get_trainable_params(model: nn.Module) -> Tuple[int, int, float]:
     return total_params, trainable_params, trainable_pct
 
 
-def estimate_memory_usage(model: nn.Module, batch_size: int, seq_length: int) -> Dict[str, float]:
+def estimate_memory_usage(
+    model: nn.Module, batch_size: int, seq_length: int
+) -> Dict[str, float]:
     """
     Estimate memory usage for training.
 
@@ -628,7 +684,7 @@ def estimate_memory_usage(model: nn.Module, batch_size: int, seq_length: int) ->
 
     # Estimate memory components (assuming bfloat16)
     bytes_per_param = 2  # bfloat16
-    bytes_per_grad = 2   # bfloat16
+    bytes_per_grad = 2  # bfloat16
     bytes_per_optim_state = 8  # Adam maintains 2 states per param, 4 bytes each
 
     param_memory = total_params * bytes_per_param
@@ -639,7 +695,9 @@ def estimate_memory_usage(model: nn.Module, batch_size: int, seq_length: int) ->
     # For Falcon3-1B: hidden_size=2048, num_layers=24
     hidden_size = 2048
     num_layers = 24
-    activation_memory = batch_size * seq_length * hidden_size * num_layers * bytes_per_param
+    activation_memory = (
+        batch_size * seq_length * hidden_size * num_layers * bytes_per_param
+    )
 
     total_memory = param_memory + grad_memory + optim_memory + activation_memory
 
@@ -650,4 +708,3 @@ def estimate_memory_usage(model: nn.Module, batch_size: int, seq_length: int) ->
         "activations_gb": activation_memory / 1e9,
         "total_estimated_gb": total_memory / 1e9,
     }
-

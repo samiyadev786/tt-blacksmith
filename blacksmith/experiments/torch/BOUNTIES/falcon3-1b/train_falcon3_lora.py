@@ -20,13 +20,13 @@ Verification:
     export LOGGER_LEVEL=DEBUG
     Look for printed TTIR graphs confirming TT execution.
 """
+import json
 import os
 import sys
-import json
 import traceback
-from pathlib import Path
-from typing import Dict, Optional, List, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 # Add parent directory to path for imports (handles hyphenated directory name)
 _current_dir = Path(__file__).parent
@@ -35,45 +35,43 @@ if str(_current_dir) not in sys.path:
 
 import torch
 import torch.nn.functional as F
+from peft import LoraConfig, TaskType, get_peft_model
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import LoraConfig, get_peft_model, TaskType
 
 # Conditional import for TT-XLA
 try:
     import torch_xla
     import torch_xla.core.xla_model as xm
     import torch_xla.runtime as xr
+
     TORCH_XLA_AVAILABLE = True
 except ImportError:
     TORCH_XLA_AVAILABLE = False
     print("Warning: torch_xla not available. TT device support disabled.")
 
 from configs import Falcon3TrainingConfig
-from wikitext_dataset import get_wikitext_dataset
 from utils import (
-    fallback_registry,
-    cross_entropy_loss_with_mask,
-    custom_cross_entropy_loss,
-    transform_labels_for_custom_loss,
     compute_perplexity,
-    compute_accuracy,
+    estimate_memory_usage,
+    fallback_registry,
+    get_trainable_params,
     save_loss_curves,
     save_perplexity_curves,
-    get_trainable_params,
-    estimate_memory_usage,
 )
+from wikitext_dataset import get_wikitext_dataset
+
+from blacksmith.tools.checkpoints_manager import CheckpointManager
 from blacksmith.tools.cli import generate_config, parse_cli_options
 from blacksmith.tools.logging_manager import TrainingLogger
-from blacksmith.tools.checkpoints_manager import CheckpointManager
 from blacksmith.tools.reproducibility_manager import ReproducibilityManager
 
 
 class Falcon3DeviceManager:
     """
     Device manager for Falcon3-1B training.
-    
+
     Handles device setup for both TT-N150 and CPU training,
     with proper environment configuration.
     """
@@ -110,7 +108,9 @@ class Falcon3DeviceManager:
 
         # Enable debug logging to verify TTIR graphs
         if os.environ.get("LOGGER_LEVEL", "").upper() == "DEBUG":
-            os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_dump_to=/tmp/xla_dumps"
+            os.environ["XLA_FLAGS"] = (
+                os.environ.get("XLA_FLAGS", "") + " --xla_dump_to=/tmp/xla_dumps"
+            )
 
     def prepare_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Move batch tensors to device."""
@@ -174,10 +174,10 @@ def get_falcon3_model(config: Falcon3TrainingConfig, device: torch.device):
 def collate_fn_causal_lm(batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
     """
     Collate function that shifts labels for causal LM training.
-    
+
     Args:
         batch: Dictionary with input_ids, attention_mask, labels
-        
+
     Returns:
         Batch with shifted labels
     """
@@ -202,7 +202,7 @@ def training_step(
 ) -> torch.Tensor:
     """
     Execute a single training step.
-    
+
     This function is designed to keep large tensors (logits) scoped locally
     to prevent memory issues.
 
@@ -346,6 +346,7 @@ def train(
 
     # Learning rate scheduler
     from torch.optim.lr_scheduler import CosineAnnealingLR
+
     scheduler = None
     if config.warmup_steps > 0:
         scheduler = CosineAnnealingLR(
@@ -362,15 +363,21 @@ def train(
         if checkpoint_data:
             start_step = checkpoint_data.get("step", 0)
             start_epoch = checkpoint_data.get("epoch", 0)
-            logger.info(f"Resumed from checkpoint: step {start_step}, epoch {start_epoch}")
+            logger.info(
+                f"Resumed from checkpoint: step {start_step}, epoch {start_epoch}"
+            )
 
     # Load datasets
     logger.info("Loading Wikitext-2 dataset...")
-    train_dataset = get_wikitext_dataset(config, split="train", collate_fn=collate_fn_causal_lm)
+    train_dataset = get_wikitext_dataset(
+        config, split="train", collate_fn=collate_fn_causal_lm
+    )
     train_dataloader = train_dataset.get_dataloader()
     logger.info(f"Train dataset size: {len(train_dataset)} examples")
 
-    val_dataset = get_wikitext_dataset(config, split="validation", collate_fn=collate_fn_causal_lm)
+    val_dataset = get_wikitext_dataset(
+        config, split="validation", collate_fn=collate_fn_causal_lm
+    )
     val_dataloader = val_dataset.get_dataloader()
     logger.info(f"Validation dataset size: {len(val_dataset)} examples")
 
@@ -387,7 +394,7 @@ def train(
 
     global_step = start_step
     running_loss = 0.0
-    best_val_loss = float('inf')
+    best_val_loss = float("inf")
 
     try:
         for epoch in range(start_epoch, config.num_epochs):
@@ -404,7 +411,9 @@ def train(
             for batch_idx, batch in enumerate(progress_bar):
                 # Check max_steps
                 if config.max_steps > 0 and global_step >= config.max_steps:
-                    logger.info(f"Reached max_steps ({config.max_steps}), stopping training")
+                    logger.info(
+                        f"Reached max_steps ({config.max_steps}), stopping training"
+                    )
                     break
 
                 # Zero gradients
@@ -440,23 +449,29 @@ def train(
                 global_step += 1
 
                 # Update progress bar
-                progress_bar.set_postfix({
-                    "loss": f"{loss_value:.4f}",
-                    "avg_loss": f"{epoch_loss / epoch_steps:.4f}",
-                })
+                progress_bar.set_postfix(
+                    {
+                        "loss": f"{loss_value:.4f}",
+                        "avg_loss": f"{epoch_loss / epoch_steps:.4f}",
+                    }
+                )
 
                 # Periodic logging and validation
                 if global_step % config.steps_freq == 0:
                     avg_loss = running_loss / config.steps_freq
                     perplexity = compute_perplexity(avg_loss)
-                    current_lr = optimizer.param_groups[0]['lr']
+                    current_lr = optimizer.param_groups[0]["lr"]
 
                     # Log training metrics
-                    logger.log_metrics({
-                        "train/loss": avg_loss,
-                        "train/perplexity": perplexity,
-                        "train/learning_rate": current_lr,
-                    }, step=global_step, commit=False)
+                    logger.log_metrics(
+                        {
+                            "train/loss": avg_loss,
+                            "train/perplexity": perplexity,
+                            "train/learning_rate": current_lr,
+                        },
+                        step=global_step,
+                        commit=False,
+                    )
 
                     running_loss = 0.0
 
@@ -472,11 +487,14 @@ def train(
                         model, val_dataloader, device_manager, config, logger
                     )
 
-                    logger.log_metrics({
-                        "val/loss": val_metrics["val_loss"],
-                        "val/perplexity": val_metrics["val_perplexity"],
-                        "val/accuracy": val_metrics["val_accuracy"],
-                    }, step=global_step)
+                    logger.log_metrics(
+                        {
+                            "val/loss": val_metrics["val_loss"],
+                            "val/perplexity": val_metrics["val_perplexity"],
+                            "val/accuracy": val_metrics["val_accuracy"],
+                        },
+                        step=global_step,
+                    )
 
                     # Track metrics
                     metrics_history["val_loss"].append(val_metrics["val_loss"])
@@ -487,7 +505,10 @@ def train(
                     if val_metrics["val_loss"] < best_val_loss:
                         best_val_loss = val_metrics["val_loss"]
                         checkpoint_manager.save_checkpoint(
-                            model, global_step, epoch, optimizer,
+                            model,
+                            global_step,
+                            epoch,
+                            optimizer,
                             metrics=val_metrics,
                             checkpoint_name="best_model.pt",
                         )
@@ -501,24 +522,35 @@ def train(
                 # Checkpoint saving
                 if checkpoint_manager.should_save_checkpoint(global_step):
                     checkpoint_manager.save_checkpoint(
-                        model, global_step, epoch, optimizer,
+                        model,
+                        global_step,
+                        epoch,
+                        optimizer,
                         metrics={"train/loss": loss_value},
                     )
 
             # End of epoch logging
             epoch_avg_loss = epoch_loss / epoch_steps if epoch_steps > 0 else 0.0
-            logger.info(f"Epoch {epoch + 1} completed. Average loss: {epoch_avg_loss:.4f}")
+            logger.info(
+                f"Epoch {epoch + 1} completed. Average loss: {epoch_avg_loss:.4f}"
+            )
 
             # Epoch checkpoint
             if checkpoint_manager.should_save_checkpoint(global_step, epoch):
                 checkpoint_manager.save_checkpoint(
-                    model, global_step, epoch, optimizer,
+                    model,
+                    global_step,
+                    epoch,
+                    optimizer,
                     checkpoint_name=f"epoch_{epoch + 1}.pt",
                 )
 
         # Final checkpoint
         final_path = checkpoint_manager.save_checkpoint(
-            model, global_step, epoch, optimizer,
+            model,
+            global_step,
+            epoch,
+            optimizer,
             checkpoint_name="final_model.pt",
         )
         logger.info(f"Saved final model to {final_path}")
@@ -532,7 +564,9 @@ def train(
 
             if metrics_history["train_loss"] and metrics_history["val_loss"]:
                 # Align lengths for plotting
-                min_len = min(len(metrics_history["train_loss"]), len(metrics_history["val_loss"]))
+                min_len = min(
+                    len(metrics_history["train_loss"]), len(metrics_history["val_loss"])
+                )
                 save_loss_curves(
                     metrics_history["train_loss"][:min_len],
                     metrics_history["val_loss"][:min_len],
@@ -542,7 +576,9 @@ def train(
                 )
 
             if metrics_history["train_ppl"] and metrics_history["val_ppl"]:
-                min_len = min(len(metrics_history["train_ppl"]), len(metrics_history["val_ppl"]))
+                min_len = min(
+                    len(metrics_history["train_ppl"]), len(metrics_history["val_ppl"])
+                )
                 save_perplexity_curves(
                     metrics_history["train_ppl"][:min_len],
                     metrics_history["val_ppl"][:min_len],
@@ -554,10 +590,10 @@ def train(
         # Save metrics history
         metrics_path = os.path.join(
             config.project_dir,
-            f"metrics_history_{'tt' if config.use_tt else 'cpu'}.json"
+            f"metrics_history_{'tt' if config.use_tt else 'cpu'}.json",
         )
         os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
-        with open(metrics_path, 'w') as f:
+        with open(metrics_path, "w") as f:
             json.dump(metrics_history, f, indent=2)
         logger.info(f"Saved metrics history to {metrics_path}")
 
@@ -611,4 +647,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

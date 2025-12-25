@@ -36,4 +36,3 @@ numpy>=1.24.0
 
 # For TT-N150 support (install separately from Tenstorrent)
 # torch-xla (TT variant)
-

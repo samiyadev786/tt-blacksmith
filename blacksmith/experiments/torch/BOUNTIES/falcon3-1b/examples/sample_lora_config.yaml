@@ -77,7 +77,7 @@ lora_task_type: "CAUSAL_LM"
 # Target all attention and MLP projections
 lora_target_modules:
   - "q_proj"    # Query projection
-  - "k_proj"    # Key projection  
+  - "k_proj"    # Key projection
   - "v_proj"    # Value projection
   - "o_proj"    # Output projection
   - "gate_proj" # MLP gate
@@ -97,4 +97,3 @@ max_length: 256
 
 # Data type
 dtype: "torch.bfloat16"
-

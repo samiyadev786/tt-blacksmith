@@ -9,7 +9,7 @@ suitable for causal language model fine-tuning.
 """
 import sys
 from pathlib import Path
-from typing import Optional, Callable, Dict, List
+from typing import Callable, Dict, List, Optional
 
 # Add parent directory to path for imports (handles hyphenated directory name)
 _current_dir = Path(__file__).parent
@@ -18,8 +18,8 @@ if str(_current_dir) not in sys.path:
 
 import torch
 from datasets import load_dataset
-from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 from torch.utils.data import DataLoader, Dataset
+from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
 from configs import Falcon3TrainingConfig
 
@@ -27,7 +27,7 @@ from configs import Falcon3TrainingConfig
 class WikitextDataset(Dataset):
     """
     Wikitext-2 dataset for causal language model training.
-    
+
     Processes the Wikitext-2 dataset into tokenized chunks suitable
     for training Falcon3-1B with LoRA.
     """
@@ -69,7 +69,9 @@ class WikitextDataset(Dataset):
     def _prepare_dataset(self):
         """Load and prepare the Wikitext-2 dataset."""
         # Load the raw dataset
-        raw_dataset = load_dataset("wikitext", self.config.dataset_name, split=self.split)
+        raw_dataset = load_dataset(
+            "wikitext", self.config.dataset_name, split=self.split
+        )
 
         # Filter out empty examples
         raw_dataset = raw_dataset.filter(
@@ -103,7 +105,7 @@ class WikitextDataset(Dataset):
     def _group_texts(self, examples: Dict[str, List]) -> Dict[str, List]:
         """
         Group tokenized texts into chunks of max_length.
-        
+
         This concatenates all texts and then splits them into fixed-length
         chunks for efficient training.
         """
@@ -182,7 +184,11 @@ class WikitextDataset(Dataset):
         else:
             collate_function = data_collator
 
-        batch_size = self.config.batch_size if self.split == "train" else self.config.eval_batch_size
+        batch_size = (
+            self.config.batch_size
+            if self.split == "train"
+            else self.config.eval_batch_size
+        )
 
         return DataLoader(
             self,  # Use self (WikitextDataset) which implements __getitem__ and __len__
@@ -212,4 +218,3 @@ def get_wikitext_dataset(
         WikitextDataset instance
     """
     return WikitextDataset(config=config, split=split, collate_fn=collate_fn)
-

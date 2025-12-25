@@ -20,6 +20,7 @@ Example Usage:
     python minimal_repro_template.py
 """
 import os
+
 import torch
 import torch.nn as nn
 
@@ -27,6 +28,7 @@ import torch.nn as nn
 try:
     import torch_xla
     import torch_xla.runtime as xr
+
     TORCH_XLA_AVAILABLE = True
 except ImportError:
     TORCH_XLA_AVAILABLE = False
@@ -48,15 +50,16 @@ Brief description of the issue:
 # ENVIRONMENT SETUP
 # =============================================================================
 
+
 def setup_tt_device():
     """Setup TT device for testing."""
     if not TORCH_XLA_AVAILABLE:
         raise RuntimeError("torch_xla not available")
-    
+
     xr.set_device_type("TT")
     os.environ["PJRT_DEVICE"] = "TT"
     os.environ["XLA_STABLEHLO_COMPILE"] = "1"
-    
+
     return torch_xla.device()
 
 
@@ -64,17 +67,19 @@ def setup_tt_device():
 # MINIMAL MODEL/OPERATION (Fill this section)
 # =============================================================================
 
+
 class MinimalModel(nn.Module):
     """
     Minimal model that reproduces the issue.
-    
+
     Replace this with the simplest model that triggers the error.
     """
+
     def __init__(self):
         super().__init__()
         # Example: Simple linear layer
         self.linear = nn.Linear(256, 256)
-    
+
     def forward(self, x):
         # Example: The operation that fails
         return self.linear(x)
@@ -83,13 +88,13 @@ class MinimalModel(nn.Module):
 def create_minimal_input():
     """
     Create minimal input that reproduces the issue.
-    
+
     Use the smallest input shape that triggers the error.
     """
     batch_size = 1
     seq_len = 32
     hidden_dim = 256
-    
+
     return torch.randn(batch_size, seq_len, hidden_dim)
 
 
@@ -97,13 +102,14 @@ def create_minimal_input():
 # REPRODUCER
 # =============================================================================
 
+
 def reproduce_issue():
     """Main reproducer function."""
     print(f"Issue: {ISSUE_TITLE}")
     print("-" * 60)
     print(ISSUE_DESCRIPTION)
     print("-" * 60)
-    
+
     # Setup device
     if TORCH_XLA_AVAILABLE:
         print("Setting up TT device...")
@@ -112,38 +118,39 @@ def reproduce_issue():
     else:
         print("torch_xla not available, using CPU")
         device = torch.device("cpu")
-    
+
     # Create model
     print("\nCreating model...")
     model = MinimalModel()
     model = model.to(torch.bfloat16)
     model = model.to(device)
-    
+
     # Create input
     print("Creating input...")
     x = create_minimal_input()
     x = x.to(torch.bfloat16)
     x = x.to(device)
-    
+
     # Run forward pass (this should trigger the issue)
     print("\nRunning forward pass...")
     try:
         output = model(x)
-        
+
         # Sync to force execution
         if TORCH_XLA_AVAILABLE:
             torch_xla.sync(wait=True)
-        
+
         print(f"Output shape: {output.shape}")
         print("\n✅ No error occurred!")
-        
+
     except Exception as e:
         print(f"\n❌ Error occurred:")
         print(f"   Type: {type(e).__name__}")
         print(f"   Message: {str(e)}")
-        
+
         # Print full traceback for debugging
         import traceback
+
         print("\nFull traceback:")
         traceback.print_exc()
 
@@ -152,10 +159,11 @@ def reproduce_issue():
 # WORKAROUND (Optional)
 # =============================================================================
 
+
 def workaround():
     """
     Document any workaround that allows training to continue.
-    
+
     This helps others while the issue is being investigated.
     """
     print("Workaround:")
@@ -176,4 +184,3 @@ if __name__ == "__main__":
     reproduce_issue()
     print("\n" + "=" * 60)
     workaround()
-
