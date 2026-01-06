@@ -60,9 +60,7 @@ class Falcon3TrainingConfig(BaseModel):
     use_wandb: bool = Field(default=True)
     wandb_project: str = Field(default="falcon3-1b-lora-training")
     wandb_run_name: str = Field(default="falcon3-1b-lora")
-    wandb_tags: List[str] = Field(
-        default_factory=lambda: ["falcon3", "lora", "wikitext-2"]
-    )
+    wandb_tags: List[str] = Field(default_factory=lambda: ["falcon3", "lora", "wikitext-2"])
     wandb_watch_mode: str = Field(default="all")
     wandb_log_freq: int = Field(default=100)
     model_to_wandb: bool = Field(default=False)
@@ -93,9 +91,7 @@ class Falcon3TrainingConfig(BaseModel):
     use_tt: bool = Field(default=True)
     mesh_shape: Optional[List[int]] = Field(default=None)
     mesh_axis_names: Optional[List[str]] = Field(default=None)
-    model_sharding_patterns: Optional[List[Tuple[str, Tuple[Optional[str], ...]]]] = (
-        Field(default=None)
-    )
+    model_sharding_patterns: Optional[List[Tuple[str, Tuple[Optional[str], ...]]]] = Field(default=None)
 
     # Fallback settings for TT-N150
     enable_fallback: bool = Field(default=True)

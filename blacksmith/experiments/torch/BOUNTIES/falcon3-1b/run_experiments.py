@@ -104,18 +104,14 @@ def create_quick_config(base_config: str, output_path: str) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Run Falcon3-1B LoRA training experiments"
-    )
+    parser = argparse.ArgumentParser(description="Run Falcon3-1B LoRA training experiments")
     parser.add_argument(
         "--mode",
         choices=["tt", "cpu", "both", "compare"],
         default="both",
         help="Training mode: 'tt' for TT-N150, 'cpu' for baseline, 'both' for both, 'compare' to compare existing results",
     )
-    parser.add_argument(
-        "--quick", action="store_true", help="Quick test mode with limited steps"
-    )
+    parser.add_argument("--quick", action="store_true", help="Quick test mode with limited steps")
     parser.add_argument(
         "--debug",
         action="store_true",
@@ -164,12 +160,8 @@ def main():
         quick_dir = script_dir / "configs" / "quick"
         quick_dir.mkdir(parents=True, exist_ok=True)
 
-        tt_config = create_quick_config(
-            tt_config, str(quick_dir / "tt_n150_quick.yaml")
-        )
-        cpu_config = create_quick_config(
-            cpu_config, str(quick_dir / "cpu_baseline_quick.yaml")
-        )
+        tt_config = create_quick_config(tt_config, str(quick_dir / "tt_n150_quick.yaml"))
+        cpu_config = create_quick_config(cpu_config, str(quick_dir / "cpu_baseline_quick.yaml"))
 
     # Run experiments
     tt_success = True

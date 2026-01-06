@@ -69,14 +69,10 @@ class WikitextDataset(Dataset):
     def _prepare_dataset(self):
         """Load and prepare the Wikitext-2 dataset."""
         # Load the raw dataset
-        raw_dataset = load_dataset(
-            "wikitext", self.config.dataset_name, split=self.split
-        )
+        raw_dataset = load_dataset("wikitext", self.config.dataset_name, split=self.split)
 
         # Filter out empty examples
-        raw_dataset = raw_dataset.filter(
-            lambda example: len(example["text"].strip()) > 0
-        )
+        raw_dataset = raw_dataset.filter(lambda example: len(example["text"].strip()) > 0)
 
         # Tokenize and chunk the dataset
         tokenized_dataset = raw_dataset.map(
@@ -184,11 +180,7 @@ class WikitextDataset(Dataset):
         else:
             collate_function = data_collator
 
-        batch_size = (
-            self.config.batch_size
-            if self.split == "train"
-            else self.config.eval_batch_size
-        )
+        batch_size = self.config.batch_size if self.split == "train" else self.config.eval_batch_size
 
         return DataLoader(
             self,  # Use self (WikitextDataset) which implements __getitem__ and __len__

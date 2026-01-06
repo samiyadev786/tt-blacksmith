@@ -108,9 +108,7 @@ class Falcon3DeviceManager:
 
         # Enable debug logging to verify TTIR graphs
         if os.environ.get("LOGGER_LEVEL", "").upper() == "DEBUG":
-            os.environ["XLA_FLAGS"] = (
-                os.environ.get("XLA_FLAGS", "") + " --xla_dump_to=/tmp/xla_dumps"
-            )
+            os.environ["XLA_FLAGS"] = os.environ.get("XLA_FLAGS", "") + " --xla_dump_to=/tmp/xla_dumps"
 
     def prepare_batch(self, batch: Dict[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
         """Move batch tensors to device."""
@@ -363,21 +361,15 @@ def train(
         if checkpoint_data:
             start_step = checkpoint_data.get("step", 0)
             start_epoch = checkpoint_data.get("epoch", 0)
-            logger.info(
-                f"Resumed from checkpoint: step {start_step}, epoch {start_epoch}"
-            )
+            logger.info(f"Resumed from checkpoint: step {start_step}, epoch {start_epoch}")
 
     # Load datasets
     logger.info("Loading Wikitext-2 dataset...")
-    train_dataset = get_wikitext_dataset(
-        config, split="train", collate_fn=collate_fn_causal_lm
-    )
+    train_dataset = get_wikitext_dataset(config, split="train", collate_fn=collate_fn_causal_lm)
     train_dataloader = train_dataset.get_dataloader()
     logger.info(f"Train dataset size: {len(train_dataset)} examples")
 
-    val_dataset = get_wikitext_dataset(
-        config, split="validation", collate_fn=collate_fn_causal_lm
-    )
+    val_dataset = get_wikitext_dataset(config, split="validation", collate_fn=collate_fn_causal_lm)
     val_dataloader = val_dataset.get_dataloader()
     logger.info(f"Validation dataset size: {len(val_dataset)} examples")
 
@@ -411,9 +403,7 @@ def train(
             for batch_idx, batch in enumerate(progress_bar):
                 # Check max_steps
                 if config.max_steps > 0 and global_step >= config.max_steps:
-                    logger.info(
-                        f"Reached max_steps ({config.max_steps}), stopping training"
-                    )
+                    logger.info(f"Reached max_steps ({config.max_steps}), stopping training")
                     break
 
                 # Zero gradients
@@ -483,9 +473,7 @@ def train(
 
                 # Validation
                 if config.do_validation and global_step % config.eval_steps == 0:
-                    val_metrics = validate(
-                        model, val_dataloader, device_manager, config, logger
-                    )
+                    val_metrics = validate(model, val_dataloader, device_manager, config, logger)
 
                     logger.log_metrics(
                         {
@@ -531,9 +519,7 @@ def train(
 
             # End of epoch logging
             epoch_avg_loss = epoch_loss / epoch_steps if epoch_steps > 0 else 0.0
-            logger.info(
-                f"Epoch {epoch + 1} completed. Average loss: {epoch_avg_loss:.4f}"
-            )
+            logger.info(f"Epoch {epoch + 1} completed. Average loss: {epoch_avg_loss:.4f}")
 
             # Epoch checkpoint
             if checkpoint_manager.should_save_checkpoint(global_step, epoch):
@@ -564,9 +550,7 @@ def train(
 
             if metrics_history["train_loss"] and metrics_history["val_loss"]:
                 # Align lengths for plotting
-                min_len = min(
-                    len(metrics_history["train_loss"]), len(metrics_history["val_loss"])
-                )
+                min_len = min(len(metrics_history["train_loss"]), len(metrics_history["val_loss"]))
                 save_loss_curves(
                     metrics_history["train_loss"][:min_len],
                     metrics_history["val_loss"][:min_len],
@@ -576,9 +560,7 @@ def train(
                 )
 
             if metrics_history["train_ppl"] and metrics_history["val_ppl"]:
-                min_len = min(
-                    len(metrics_history["train_ppl"]), len(metrics_history["val_ppl"])
-                )
+                min_len = min(len(metrics_history["train_ppl"]), len(metrics_history["val_ppl"]))
                 save_perplexity_curves(
                     metrics_history["train_ppl"][:min_len],
                     metrics_history["val_ppl"][:min_len],

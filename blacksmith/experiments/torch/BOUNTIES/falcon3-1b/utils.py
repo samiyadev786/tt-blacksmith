@@ -66,10 +66,7 @@ class FallbackRegistry:
                 "issue_url": issue_url,
             }
         )
-        logger.warning(
-            f"CPU Fallback: {operation_name} - {reason}"
-            + (f" (Issue: {issue_url})" if issue_url else "")
-        )
+        logger.warning(f"CPU Fallback: {operation_name} - {reason}" + (f" (Issue: {issue_url})" if issue_url else ""))
 
     def get_fallbacks(self) -> List[Dict[str, Any]]:
         """Get all registered fallback operations."""
@@ -133,13 +130,8 @@ def cpu_fallback(
                 )
 
                 # Move tensors to CPU and retry
-                cpu_args = tuple(
-                    arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args
-                )
-                cpu_kwargs = {
-                    k: v.cpu() if isinstance(v, torch.Tensor) else v
-                    for k, v in kwargs.items()
-                }
+                cpu_args = tuple(arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args)
+                cpu_kwargs = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in kwargs.items()}
 
                 result = func(*cpu_args, **cpu_kwargs)
 
@@ -149,10 +141,7 @@ def cpu_fallback(
                     if isinstance(result, torch.Tensor):
                         result = result.to(original_device)
                     elif isinstance(result, tuple):
-                        result = tuple(
-                            r.to(original_device) if isinstance(r, torch.Tensor) else r
-                            for r in result
-                        )
+                        result = tuple(r.to(original_device) if isinstance(r, torch.Tensor) else r for r in result)
 
                 return result
 
@@ -206,12 +195,8 @@ class CPUFallbackModule(nn.Module):
             original_device = args[0].device
 
         # Move inputs to CPU
-        cpu_args = tuple(
-            arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args
-        )
-        cpu_kwargs = {
-            k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in kwargs.items()
-        }
+        cpu_args = tuple(arg.cpu() if isinstance(arg, torch.Tensor) else arg for arg in args)
+        cpu_kwargs = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in kwargs.items()}
 
         # Move module to CPU temporarily
         original_module_device = next(self.module.parameters()).device
@@ -228,10 +213,7 @@ class CPUFallbackModule(nn.Module):
             if isinstance(result, torch.Tensor):
                 result = result.to(original_device)
             elif isinstance(result, tuple):
-                result = tuple(
-                    r.to(original_device) if isinstance(r, torch.Tensor) else r
-                    for r in result
-                )
+                result = tuple(r.to(original_device) if isinstance(r, torch.Tensor) else r for r in result)
 
         return result
 
@@ -484,9 +466,7 @@ def compare_metrics(
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
-        plt.plot(
-            steps, cpu_metrics["train_loss"], label="CPU", color="blue", linewidth=2
-        )
+        plt.plot(steps, cpu_metrics["train_loss"], label="CPU", color="blue", linewidth=2)
         plt.plot(
             steps,
             tt_metrics["train_loss"],
@@ -503,9 +483,7 @@ def compare_metrics(
 
         plt.subplot(1, 2, 2)
         if "val_loss" in cpu_metrics and "val_loss" in tt_metrics:
-            plt.plot(
-                steps, cpu_metrics["val_loss"], label="CPU", color="blue", linewidth=2
-            )
+            plt.plot(steps, cpu_metrics["val_loss"], label="CPU", color="blue", linewidth=2)
             plt.plot(
                 steps,
                 tt_metrics["val_loss"],
@@ -529,9 +507,7 @@ def compare_metrics(
         plt.figure(figsize=(12, 5))
 
         plt.subplot(1, 2, 1)
-        plt.plot(
-            steps, cpu_metrics["train_ppl"], label="CPU", color="blue", linewidth=2
-        )
+        plt.plot(steps, cpu_metrics["train_ppl"], label="CPU", color="blue", linewidth=2)
         plt.plot(
             steps,
             tt_metrics["train_ppl"],
@@ -548,9 +524,7 @@ def compare_metrics(
 
         plt.subplot(1, 2, 2)
         if "val_ppl" in cpu_metrics and "val_ppl" in tt_metrics:
-            plt.plot(
-                steps, cpu_metrics["val_ppl"], label="CPU", color="blue", linewidth=2
-            )
+            plt.plot(steps, cpu_metrics["val_ppl"], label="CPU", color="blue", linewidth=2)
             plt.plot(
                 steps,
                 tt_metrics["val_ppl"],
@@ -566,9 +540,7 @@ def compare_metrics(
             plt.grid(True, alpha=0.3)
 
         plt.tight_layout()
-        plt.savefig(
-            os.path.join(output_dir, f"{prefix}perplexity_comparison.png"), dpi=150
-        )
+        plt.savefig(os.path.join(output_dir, f"{prefix}perplexity_comparison.png"), dpi=150)
         plt.close()
 
     logger.info(f"Saved comparison plots to {output_dir}")
@@ -627,14 +599,10 @@ def print_parity_report(parity: Dict[str, Dict[str, float]]):
     for metric_name, stats in parity.items():
         logger.info(f"\n{metric_name}:")
         logger.info(
-            f"  Final CPU:         {stats['final_cpu']:.6f}"
-            if stats["final_cpu"]
-            else "  Final CPU:         N/A"
+            f"  Final CPU:         {stats['final_cpu']:.6f}" if stats["final_cpu"] else "  Final CPU:         N/A"
         )
         logger.info(
-            f"  Final TT-N150:     {stats['final_tt']:.6f}"
-            if stats["final_tt"]
-            else "  Final TT-N150:     N/A"
+            f"  Final TT-N150:     {stats['final_tt']:.6f}" if stats["final_tt"] else "  Final TT-N150:     N/A"
         )
         logger.info(f"  Mean Abs Diff:     {stats['mean_abs_diff']:.6f}")
         logger.info(f"  Max Abs Diff:      {stats['max_abs_diff']:.6f}")
@@ -666,9 +634,7 @@ def get_trainable_params(model: nn.Module) -> Tuple[int, int, float]:
     return total_params, trainable_params, trainable_pct
 
 
-def estimate_memory_usage(
-    model: nn.Module, batch_size: int, seq_length: int
-) -> Dict[str, float]:
+def estimate_memory_usage(model: nn.Module, batch_size: int, seq_length: int) -> Dict[str, float]:
     """
     Estimate memory usage for training.
 
@@ -695,9 +661,7 @@ def estimate_memory_usage(
     # For Falcon3-1B: hidden_size=2048, num_layers=24
     hidden_size = 2048
     num_layers = 24
-    activation_memory = (
-        batch_size * seq_length * hidden_size * num_layers * bytes_per_param
-    )
+    activation_memory = batch_size * seq_length * hidden_size * num_layers * bytes_per_param
 
     total_memory = param_memory + grad_memory + optim_memory + activation_memory
 
