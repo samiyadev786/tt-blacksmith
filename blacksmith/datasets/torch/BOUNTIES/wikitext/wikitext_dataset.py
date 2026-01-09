@@ -2,42 +2,34 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 """
-Wikitext-2 Dataset Implementation for Falcon3-1B LoRA Training.
+Wikitext-2 Dataset Implementation for Causal Language Model Training.
 
 This module provides a dataset wrapper for the Wikitext-2 dataset,
 suitable for causal language model fine-tuning.
 """
-import sys
-from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List
 
-# Add parent directory to path for imports (handles hyphenated directory name)
-_current_dir = Path(__file__).parent
-if str(_current_dir) not in sys.path:
-    sys.path.insert(0, str(_current_dir))
-
-import torch
 from datasets import load_dataset
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
-from configs import Falcon3TrainingConfig
+from blacksmith.datasets.torch.torch_dataset import BaseDataset
+from blacksmith.tools.templates.configs import TrainingConfig
 
 
-class WikitextDataset(Dataset):
+DATASET_BENCHMARK = "wikitext"
+DATASET_NAME = "wikitext-2-raw-v1"
+
+
+class WikitextDataset(BaseDataset):
     """
     Wikitext-2 dataset for causal language model training.
 
     Processes the Wikitext-2 dataset into tokenized chunks suitable
-    for training Falcon3-1B with LoRA.
+    for training LLMs with LoRA.
     """
 
-    def __init__(
-        self,
-        config: Falcon3TrainingConfig,
-        split: str = "train",
-        collate_fn: Optional[Callable] = None,
-    ):
+    def __init__(self, config: TrainingConfig, split: str = "train", collate_fn=None):
         """
         Initialize the Wikitext dataset.
 
@@ -51,12 +43,7 @@ class WikitextDataset(Dataset):
         self.collate_fn = collate_fn
 
         # Initialize tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            config.model_name,
-            padding_side="right",
-            use_fast=True,
-            trust_remote_code=True,
-        )
+        self.tokenizer = AutoTokenizer.from_pretrained(config.model_name, padding_side="right", use_fast=True)
 
         # Set pad token if not available
         if self.tokenizer.pad_token is None:
@@ -68,8 +55,7 @@ class WikitextDataset(Dataset):
 
     def _prepare_dataset(self):
         """Load and prepare the Wikitext-2 dataset."""
-        # Load the raw dataset
-        raw_dataset = load_dataset("wikitext", self.config.dataset_name, split=self.split)
+        raw_dataset = load_dataset(DATASET_BENCHMARK, DATASET_NAME, split=self.split)
 
         # Filter out empty examples
         raw_dataset = raw_dataset.filter(lambda example: len(example["text"].strip()) > 0)
@@ -132,21 +118,11 @@ class WikitextDataset(Dataset):
 
         return result
 
-    def __len__(self) -> int:
-        """Return the number of examples in the dataset."""
-        return len(self.dataset)
-
-    def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        """
-        Get a single example from the dataset.
-
-        Args:
-            idx: Index of the example
-
-        Returns:
-            Dictionary containing input_ids, attention_mask, and labels
-        """
+    def __getitem__(self, idx: int) -> Dict:
+        """Get a single example from the dataset."""
         sample = self.dataset[idx]
+
+        import torch
 
         return {
             "input_ids": torch.tensor(sample["input_ids"], dtype=torch.long),
@@ -155,13 +131,7 @@ class WikitextDataset(Dataset):
         }
 
     def get_dataloader(self) -> DataLoader:
-        """
-        Create and return a DataLoader for this dataset.
-
-        Returns:
-            DataLoader configured for training/evaluation
-        """
-        # Use DataCollatorForLanguageModeling for proper padding
+        """Create and return a DataLoader for this dataset."""
         data_collator = DataCollatorForLanguageModeling(
             tokenizer=self.tokenizer,
             mlm=False,  # We're doing causal LM, not masked LM
@@ -169,44 +139,23 @@ class WikitextDataset(Dataset):
         )
 
         if self.collate_fn is not None:
-            # Wrap the data collator with custom collate function
+
             def combined_collate_fn(batch):
-                # First apply the HuggingFace data collator
                 collated = data_collator(batch)
-                # Then apply the custom collate function
                 return self.collate_fn(collated)
 
             collate_function = combined_collate_fn
         else:
             collate_function = data_collator
 
-        batch_size = self.config.batch_size if self.split == "train" else self.config.eval_batch_size
+        batch_size = self.config.batch_size
 
         return DataLoader(
-            self,  # Use self (WikitextDataset) which implements __getitem__ and __len__
+            self,
             batch_size=batch_size,
             collate_fn=collate_function,
             shuffle=(self.split == "train"),
             drop_last=(self.split == "train"),
-            num_workers=0,  # Set to 0 for compatibility with TT devices
+            num_workers=0,
             pin_memory=False,
         )
-
-
-def get_wikitext_dataset(
-    config: Falcon3TrainingConfig,
-    split: str = "train",
-    collate_fn: Optional[Callable] = None,
-) -> WikitextDataset:
-    """
-    Factory function to create a WikitextDataset.
-
-    Args:
-        config: Training configuration
-        split: Dataset split ("train", "validation", or "test")
-        collate_fn: Optional custom collate function
-
-    Returns:
-        WikitextDataset instance
-    """
-    return WikitextDataset(config=config, split=split, collate_fn=collate_fn)
