@@ -1,18 +1,6 @@
 # SPDX-FileCopyrightText: (c) 2025 Tenstorrent AI ULC
 #
 # SPDX-License-Identifier: Apache-2.0
-"""
-Falcon3-1B-Base LoRA Fine-tuning on Wikitext-2.
-
-This script implements LoRA fine-tuning of tiiuae/Falcon3-1B-Base
-on the Wikitext-2 dataset using TT-XLA.
-
-Usage:
-    python test_falcon3_finetuning.py --config test_falcon3_finetuning.yaml
-
-    # For debug logging:
-    TTXLA_LOGGER_LEVEL=DEBUG python test_falcon3_finetuning.py
-"""
 import traceback
 from pathlib import Path
 

@@ -12,7 +12,7 @@ The experiment is designed to run on TT-N150 hardware using the TT-XLA framework
 ## Training
 
 ```bash
-python3 blacksmith/experiments/torch/BOUNTIES/falcon3-1b/test_falcon3_finetuning.py
+python3 blacksmith/experiments/torch/BOUNTIES/falcon3-1b/test_falcon3_finetuning.py --config blacksmith/experiments/torch/BOUNTIES/falcon3-1b/test_falcon3_finetuning.yaml
 ```
 
 For CPU baseline testing, set `use_tt: False` in the config file.
@@ -21,15 +21,15 @@ For CPU baseline testing, set `use_tt: False` in the config file.
 
 Wikitext-2 is a collection of over 100 million tokens extracted from the set of verified Good and Featured articles on Wikipedia. The task is causal language modeling - predicting the next token given previous context.
 
-Source: [Hugging Face Dataset Hub](https://huggingface.co/datasets/wikitext)
+Source: [Hugging Face Dataset Hub](https://huggingface.co/datasets/Salesforce/wikitext)
 
 Example:
 ```
 {
-  "text": "= Valkyria Chronicles III ="
+  "text": " = Valkyria Chronicles III = \n Senjō no Valkyria 3 : Unrecorded Chronicles ( Japanese : 戦場のヴァルキュリア3 , lit . Valkyria of the Battlefield 3 ) , commonly referred to as Valkyria Chronicles III outside Japan , is a tactical role @-@ playing video game developed by Sega and Media.Vision for the PlayStation Portable . Released in January 2011 in Japan , it is the third game in the Valkyria series . ..."
 }
 ```
-- text: Raw text from Wikipedia articles.
+- text: Raw text from Wikipedia articles containing full paragraphs of content.
 
 ## Configuration
 
