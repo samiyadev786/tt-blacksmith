@@ -125,9 +125,9 @@ class WikitextDataset(BaseDataset):
         import torch
 
         return {
-            "input_ids": torch.tensor(sample["input_ids"], dtype=torch.long),
-            "attention_mask": torch.tensor(sample["attention_mask"], dtype=torch.long),
-            "labels": torch.tensor(sample["labels"], dtype=torch.long),
+            "input_ids": torch.tensor(sample["input_ids"]),
+            "attention_mask": torch.tensor(sample["attention_mask"]),
+            "labels": torch.tensor(sample["labels"]),
         }
 
     def get_dataloader(self) -> DataLoader:
