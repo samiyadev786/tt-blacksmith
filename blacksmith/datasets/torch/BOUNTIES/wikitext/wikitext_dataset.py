@@ -9,13 +9,12 @@ suitable for causal language model fine-tuning.
 """
 from typing import Dict, List
 
-from datasets import load_dataset
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
 from blacksmith.datasets.torch.torch_dataset import BaseDataset
 from blacksmith.tools.templates.configs import TrainingConfig
-
+from datasets import load_dataset
 
 DATASET_BENCHMARK = "wikitext"
 DATASET_NAME = "wikitext-2-raw-v1"

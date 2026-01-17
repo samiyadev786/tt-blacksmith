@@ -12,7 +12,7 @@ The experiment is designed to run on TT-N150 hardware using the TT-XLA framework
 ## Training
 
 ```bash
-python3 blacksmith/experiments/torch/BOUNTIES/falcon3-1b/test_falcon3_finetuning.py --config blacksmith/experiments/torch/BOUNTIES/falcon3-1b/test_falcon3_finetuning.yaml
+python3 blacksmith/experiments/torch/BOUNTIES/falcon3_1b/test_falcon3_finetuning.py --config blacksmith/experiments/torch/BOUNTIES/falcon3_1b/test_falcon3_finetuning.yaml
 ```
 
 For CPU baseline testing, set `use_tt: False` in the config file.
@@ -43,9 +43,9 @@ Current `test_falcon3_finetuning.yaml` has the recommended and tested hyperparam
 | --- | --- | --- |
 | `dataset_id` | The dataset used for fine-tuning. | "wikitext" |
 | `model_name` | Name or path of the pre-trained Falcon3 model. | "tiiuae/Falcon3-1B-Base" |
-| `max_length` | Maximum token length for inputs. | 256 |
+| `max_length` | Maximum token length for inputs. | 512 |
 | `dtype` | Data type used during training. | "torch.bfloat16" |
-| `learning_rate` | Learning rate for the optimizer. | 1e-4 |
+| `learning_rate` | Learning rate for the optimizer. | 5e-5 |
 | `batch_size` | Number of samples per training batch. | 4 |
 | `gradient_checkpointing` | Whether to use gradient checkpointing to save memory. | False |
 | `num_epochs` | Total number of training epochs. | 3 |
@@ -53,7 +53,7 @@ Current `test_falcon3_finetuning.yaml` has the recommended and tested hyperparam
 | `log_level` | Logging verbosity level. | "INFO" |
 | `use_wandb` | Whether to enable Weights & Biases logging. | True |
 | `wandb_project` | Project name for Weights & Biases logging. | "falcon3-finetuning" |
-| `wandb_run_name` | Run name for Weights & Biases tracking. | "tt-falcon3-test" |
+| `wandb_run_name` | Run name for Weights & Biases tracking. | "tt-falcon3-wikitext" |
 | `wandb_tags` | List of tags assigned to the W&B run. | ["falcon3", "lora", "wikitext"] |
 | `wandb_watch_mode` | Watch mode for model parameter logging. | "all" |
 | `wandb_log_freq` | Frequency of logging to Weights & Biases (in steps). | 100 |
@@ -67,9 +67,9 @@ Current `test_falcon3_finetuning.yaml` has the recommended and tested hyperparam
 | `checkpoint_metric` | Metric to monitor for best checkpoint. | "eval/loss" |
 | `checkpoint_metric_mode` | Mode for checkpoint metric (`min` or `max`). | "min" |
 | `keep_last_n` | Number of recent checkpoints to keep. | 3 |
-| `keep_best_n` | Number of best checkpoints to keep. | 1 |
-| `save_strategy` | Strategy for saving checkpoints (`epoch` or `step`). | "step" |
-| `project_dir` | Directory for experiment outputs. | "blacksmith/experiments/torch/BOUNTIES/falcon3-1b" |
+| `keep_best_n` | Number of best checkpoints to keep. | 3 |
+| `save_strategy` | Strategy for saving checkpoints (`epoch` or `step`). | "epoch" |
+| `project_dir` | Directory for experiment outputs. | "blacksmith/experiments/torch/BOUNTIES/falcon3_1b" |
 | `save_optim` | Whether to save optimizer state. | False |
 | `storage_backend` | Storage backend for saving checkpoints. | "local" |
 | `sync_to_storage` | Whether to sync checkpoints to remote storage. | False |
@@ -77,9 +77,9 @@ Current `test_falcon3_finetuning.yaml` has the recommended and tested hyperparam
 | `remote_path` | Remote storage path (if applicable). | "" |
 | `seed` | Random seed for reproducibility. | 42 |
 | `deterministic` | Whether to enforce deterministic behavior. | False |
-| `lora_r` | Rank of LoRA adaptation matrices. | 16 |
-| `lora_alpha` | Scaling factor for LoRA updates. | 32 |
-| `lora_target_modules` | Target modules for LoRA adaptation. | ["q_proj", "k_proj", "v_proj", "o_proj"] |
+| `lora_r` | Rank of LoRA adaptation matrices. | 32 |
+| `lora_alpha` | Scaling factor for LoRA updates. | 64 |
+| `lora_target_modules` | Target modules for LoRA adaptation. | ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"] |
 | `lora_task_type` | Training task type for LoRA. | "CAUSAL_LM" |
 | `framework` | Training framework. | "pytorch" |
 | `use_tt` | Whether to run on TT device (or CPU otherwise). | True |

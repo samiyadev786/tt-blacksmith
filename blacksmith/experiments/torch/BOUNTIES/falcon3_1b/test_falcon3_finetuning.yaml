@@ -3,13 +3,13 @@ dataset_id: "wikitext"
 
 # Model settings
 model_name: "tiiuae/Falcon3-1B-Base"
-max_length: 256
+max_length: 512
 dtype: "torch.bfloat16"
 ignored_index: -100
 
-# Training hyperparameters
+# Training hyperparameters - optimized for better learning
 training_type: "lora"
-learning_rate: 1e-4
+learning_rate: 5e-5
 batch_size: 4
 gradient_checkpointing: False
 num_epochs: 3
@@ -19,7 +19,7 @@ optim: "adamw_torch"
 log_level: "INFO"
 use_wandb: True
 wandb_project: "falcon3-finetuning"
-wandb_run_name: "tt-falcon3-test"
+wandb_run_name: "tt-falcon3-wikitext"
 wandb_tags: ["falcon3", "lora", "wikitext"]
 wandb_watch_mode: "all"
 wandb_log_freq: 100
@@ -36,9 +36,9 @@ checkpoint_path: ""
 checkpoint_metric: "eval/loss"
 checkpoint_metric_mode: "min"
 keep_last_n: 3
-keep_best_n: 1
-save_strategy: "step"
-project_dir: "blacksmith/experiments/torch/BOUNTIES/falcon3-1b"
+keep_best_n: 3
+save_strategy: "epoch"
+project_dir: "blacksmith/experiments/torch/BOUNTIES/falcon3_1b"
 save_optim: False
 storage_backend: "local"
 sync_to_storage: False
@@ -49,10 +49,10 @@ remote_path: ""
 seed: 42
 deterministic: False
 
-# LoRA setup
-lora_r: 16
-lora_alpha: 32
-lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj"]
+# LoRA setup - higher rank and more target modules for better learning
+lora_r: 32
+lora_alpha: 64
+lora_target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
 lora_task_type: "CAUSAL_LM"
 
 # Other settings
