@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from blacksmith.datasets.torch.dataset_utils import get_dataset
 from blacksmith.experiments.torch.mnist.configs import TrainingConfig
-from blacksmith.models.torch.mnist.mnist_linear import MNISTLinear
+from blacksmith.models.torch.mnist.mnist_cnn import MNISTCNN
 from blacksmith.tools.checkpoints_manager import CheckpointManager
 from blacksmith.tools.cli import generate_config, parse_cli_options
 from blacksmith.tools.device_manager import DeviceManager
@@ -38,7 +38,7 @@ def validate(
 
     with torch.no_grad():
         for inputs, targets in val_loader:
-            inputs = inputs.view(inputs.size(0), -1)
+            inputs = inputs.view(inputs.size(0), 1, 28, 28)
             targets = targets.view(targets.size(0), -1)
 
             inputs = inputs.to(device_manager.device)
@@ -65,11 +65,17 @@ def train(
     logger: TrainingLogger,
     checkpoint_manager: CheckpointManager,
 ):
-    logger.info("Starting MNIST training (single chip)")
+    logger.info("Starting MNIST training with CNN model (single chip)")
 
     # Load model
-    model = MNISTLinear(config.input_size, config.hidden_size, config.output_size, bias=config.bias)
+    model = MNISTCNN(config=config)
+
+    # Convert model to specified dtype if configured
+    if hasattr(config, "dtype") and config.dtype:
+        dtype = eval(config.dtype)
+        model = model.to(dtype=dtype)
     model = model.to(device_manager.device)
+
     logger.info(f"Loaded {config.model_name} model.")
     logger.info(f"Model parameters: {sum(p.numel() for p in model.parameters())}")
     logger.info(f"Trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
@@ -97,7 +103,7 @@ def train(
         for epoch in range(config.num_epochs):
             logger.info(f"Starting epoch {epoch + 1}/{config.num_epochs}")
             for inputs, targets in train_loader:
-                inputs = inputs.view(inputs.size(0), -1)
+                inputs = inputs.view(inputs.size(0), 1, 28, 28)
                 targets = targets.view(targets.size(0), -1)
 
                 inputs = inputs.to(device_manager.device)
@@ -152,10 +158,10 @@ def train(
 
 
 if __name__ == "__main__":
-    default_config = Path(__file__).parent / "test_mnist_training.yaml"
+    default_config = Path(__file__).parent / "test_mnist_cnn_training.yaml"
 
     args = parse_cli_options(default_config=default_config)
-    config: TrainingConfig = generate_config(TrainingConfig, args.config, args.test_config)
+    config: TrainingConfig = generate_config(TrainingConfig, args.config)
 
     # Reproducibility
     repro_manager = ReproducibilityManager(config)
